@@ -1,0 +1,11 @@
+[package]
+name = "issue_repro"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "fake.rs"
+
+[dependencies]
+wasm-bindgen = "=0.2.100"
+hashbrown = "=0.15.2"

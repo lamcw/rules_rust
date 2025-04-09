@@ -1,0 +1,71 @@
+module(name = "wasm_unresolved_module")
+
+bazel_dep(name = "rules_cc", version = "0.0.17")
+bazel_dep(name = "rules_rust")
+local_path_override(
+    module_name = "rules_rust",
+    path = "../../..",
+)
+
+rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+rust.toolchain(
+    versions = ["1.82.0"],
+    edition = "2021",
+    extra_target_triples = [
+        "wasm32-unknown-unknown",
+        "aarch64-unknown-linux-gnu",
+        "x86_64-unknown-linux-gnu",
+    ],
+)
+use_repo(rust, "rust_toolchains")
+
+register_toolchains("@rust_toolchains//:all")
+
+crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+
+crate.from_cargo(
+    name = "crates",
+    # cargo_lockfile = "//:Cargo.lock",
+    manifests = ["//:Cargo.toml"],
+)
+use_repo(crate, "crates")
+
+bazel_dep(name = "toolchains_llvm", version = "1.3.0")
+
+llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")
+
+# Toolchain example for WebAssembly wasm* targets.
+llvm.toolchain(
+    name = "llvm_toolchain_wasm",
+    libclang_rt = {
+        "@libclang_rt_wasm32//:libclang_rt.builtins-wasm32.a": "wasm32-unknown-unknown/libclang_rt.builtins.a",
+    },
+    llvm_versions = {
+        "": "19.1.0",
+    },
+    stdlib = {
+        "wasm32": "libc",
+        "wasm64": "none",
+    },
+)
+llvm.sysroot(
+    name = "llvm_toolchain_wasm",
+    label = "@wasi_sdk_sysroots//wasm32-wasip2",
+    targets = ["wasm32"],
+)
+llvm.sysroot(
+    name = "llvm_toolchain_wasm",
+    label = "@wasi_sdk_sysroots//empty",
+    targets = ["wasm64"],
+)
+use_repo(llvm, "llvm_toolchain_wasm")
+
+register_toolchains("@llvm_toolchain_wasm//:all")
+
+wasi_sdk_sysroots = use_repo_rule("//wasm:wasi_sdk.bzl", "wasi_sdk_sysroots")
+
+wasi_sdk_sysroots(name = "wasi_sdk_sysroots")
+
+libclang_rt_wasm32 = use_repo_rule("//wasm:wasi_sdk.bzl", "libclang_rt_wasm32")
+
+libclang_rt_wasm32(name = "libclang_rt_wasm32")
